@@ -13,3 +13,11 @@
  *= require_tree .
  *= require_self
  */
+
+.form-input:-webkit-autofill,
+.form-input:-webkit-autofill:hover,
+.form-input:-webkit-autofill:focus {
+	-webkit-text-fill-color: #1c1917;
+	box-shadow: 0 0 0 1000px #ffffff inset;
+	transition: background-color 5000s ease-in-out 0s;
+}

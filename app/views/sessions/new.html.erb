@@ -14,11 +14,11 @@
       <%= form_with url: login_path, class: "space-y-5" do |form| %>
         <div>
           <%= form.label :email, class: "mb-2 block text-sm font-medium text-stone-700" %>
-          <%= form.email_field :email, required: true, autofocus: true, autocomplete: "email", class: "w-full rounded-md border border-stone-300 px-3 py-2.5 outline-none transition focus:border-stone-900 focus:ring-1 focus:ring-stone-900" %>
+          <%= form.email_field :email, required: true, autofocus: true, autocomplete: "email", class: "form-input w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900 focus:ring-1 focus:ring-stone-900" %>
         </div>
         <div>
           <%= form.label :password, class: "mb-2 block text-sm font-medium text-stone-700" %>
-          <%= form.password_field :password, required: true, autocomplete: "current-password", class: "w-full rounded-md border border-stone-300 px-3 py-2.5 outline-none transition focus:border-stone-900 focus:ring-1 focus:ring-stone-900" %>
+          <%= form.password_field :password, required: true, autocomplete: "current-password", class: "form-input w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900 focus:ring-1 focus:ring-stone-900" %>
         </div>
         <%= form.submit "Log in", class: "w-full rounded-md bg-stone-900 px-4 py-3 font-semibold text-white transition hover:bg-stone-700" %>
       <% end %>
