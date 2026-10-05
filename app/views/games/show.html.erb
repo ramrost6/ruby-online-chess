@@ -1,0 +1,45 @@
+<% current_player = local_assigns.fetch(:current_player, current_user) %>
+<% opponent = local_assigns.fetch(:opponent, nil) %>
+
+<section class="min-h-[calc(100vh-5rem)] bg-stone-100 px-4 py-8 text-stone-900 sm:px-6 lg:px-8">
+  <div class="mx-auto w-full max-w-xl">
+    <div class="mb-5 flex items-center justify-between rounded-lg border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <%= render "shared/player_profile", player: opponent, name: opponent&.username || "Opponent", subtitle: "Black" %>
+      <div class="text-right">
+        <p class="text-xs font-medium uppercase tracking-wider text-stone-500">Time</p>
+        <p class="font-mono text-xl font-semibold tabular-nums text-stone-900">10:00</p>
+      </div>
+    </div>
+
+    <div id="board" class="w-full max-w-[400px] mx-auto"></div>
+
+    <div class="mt-5 rounded-lg border border-stone-200 bg-white px-4 py-4 shadow-sm">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center justify-between gap-6">
+          <%= render "shared/player_profile", player: current_player, name: current_player&.username || "You", subtitle: "White" %>
+          <div class="text-right">
+            <p class="text-xs font-medium uppercase tracking-wider text-stone-500">Time</p>
+            <p class="font-mono text-xl font-semibold tabular-nums text-stone-900">10:00</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <%= render "shared/button", label: "Resign", variant: :danger %>
+          <%= render "shared/button", label: "Offer Draw", variant: :secondary %>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="/chessboardjs/css/chessboard-1.0.0.min.css">
+<script src="/chessboardjs/js/chessboard-1.0.0.min.js"></script>
+<script>
+  $(document).ready(function() {
+    var config = {
+      position: 'start',
+      pieceTheme: '/chessboardjs/img/chesspieces/wikipedia/{piece}.png'
+    };
+    var board = Chessboard('board', config);
+  });
+</script>

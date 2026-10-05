@@ -1,0 +1,13 @@
+<% player = local_assigns.fetch(:player, nil) %>
+<% name = local_assigns.fetch(:name, player&.username || "Opponent") %>
+<% initials = name.to_s.first(1).upcase %>
+
+<div class="flex items-center gap-3">
+  <div class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-stone-200 text-sm font-semibold text-stone-700">
+    <%= initials %>
+  </div>
+  <div>
+    <p class="text-sm font-semibold text-stone-900"><%= name %></p>
+    <p class="text-xs text-stone-500"><%= local_assigns.fetch(:subtitle, "Player") %></p>
+  </div>
+</div>
