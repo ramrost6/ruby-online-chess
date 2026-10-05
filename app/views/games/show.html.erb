@@ -1,7 +1,7 @@
 <% current_player = local_assigns.fetch(:current_player, current_user) %>
 <% opponent = local_assigns.fetch(:opponent, nil) %>
 
-<section class="min-h-[calc(100vh-5rem)] bg-stone-100 px-4 py-8 text-stone-900 sm:px-6 lg:px-8">
+<section class="min-h-[calc(100vh-5rem)] bg-stone-900 px-4 py-8 text-white sm:px-6 lg:px-8">
   <div class="mx-auto w-full max-w-xl">
     <div class="mb-5 flex items-center justify-between rounded-lg border border-stone-200 bg-white px-4 py-3 shadow-sm">
       <%= render "shared/player_profile", player: opponent, name: opponent&.username || "Opponent", subtitle: "Black" %>
