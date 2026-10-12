@@ -1,0 +1,31 @@
+<section class="min-h-[calc(100vh-5rem)] bg-stone-900 px-6 py-16 text-white">
+  data-lobby-id="<%= @lobby.id %>"
+  data-game-url-template="<%= game_path('__GAME_ID__') %>"
+  <div class="mx-auto max-w-lg text-center">
+    <p class="text-sm font-semibold uppercase tracking-[0.28em] text-stone-400">Waiting for opponent</p>
+    <h1 class="mt-4 text-3xl font-semibold">Share this lobby code</h1>
+    <p class="mt-3 text-stone-300">Your opponent can enter this code on the home page.</p>
+    <div class="mt-8 rounded-lg border border-stone-700 bg-stone-800 px-6 py-8">
+      <p class="font-mono text-5xl font-bold tracking-[0.35em] text-white"><%= @lobby.code %></p>
+      <p class="mt-4 text-sm text-stone-400">The game starts automatically when they join.</p>
+    </div>
+    <%= link_to "Back to home", root_path, class: "mt-8 inline-block text-sm text-stone-300 underline hover:text-white" %>
+  </div>
+</section>
+
+<script type="module">
+  import { createConsumer } from "https://cdn.jsdelivr.net/npm/@rails/actioncable@7.2.0/+esm";
+
+  const lobbyView = document.querySelector("[data-lobby-id]");
+  const consumer = createConsumer("/cable");
+  consumer.subscriptions.create(
+    { channel: "LobbyChannel", lobby_id: lobbyView.dataset.lobbyId },
+    {
+      received(data) {
+        if (data.type === "game_started") {
+          window.location.href = lobbyView.dataset.gameUrlTemplate.replace("__GAME_ID__", data.game_id);
+        }
+      }
+    }
+  );
+</script>

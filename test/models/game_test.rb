@@ -27,6 +27,35 @@ class GameTest < ActiveSupport::TestCase
     assert_equal "white", @game.turn
   end
 
+  test "records a legal client-validated move and changes the turn" do
+    @game.start!
+
+    @game.record_move!(
+      @white,
+      fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      pgn: "1. e4",
+      san: "e4"
+    )
+
+    assert_equal "e4", @game.last_move
+    assert_equal "black", @game.turn
+    assert_equal "1. e4", @game.pgn
+    assert_equal 1, @game.version
+  end
+
+  test "rejects a move from the player whose turn has not started" do
+    @game.start!
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      @game.record_move!(
+        @black,
+        fen: Game::STARTING_FEN,
+        pgn: "",
+        san: "e5"
+      )
+    end
+  end
+
   test "resigning finishes the game for the other player" do
     @game.start!
 

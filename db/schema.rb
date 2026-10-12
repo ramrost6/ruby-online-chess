@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_05_133100) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_12_213000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -27,6 +27,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_133100) do
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "last_move"
+    t.text "pgn"
+    t.integer "version", default: 0, null: false
     t.index ["black_player_id"], name: "index_games_on_black_player_id"
     t.index ["lobby_id"], name: "index_games_on_lobby_id"
     t.index ["status"], name: "index_games_on_status"
@@ -42,6 +45,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_133100) do
     t.string "time_control", default: "10+0", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "code"
+    t.index ["code"], name: "index_lobbies_on_code", unique: true
     t.index ["guest_id"], name: "index_lobbies_on_guest_id"
     t.index ["host_id"], name: "index_lobbies_on_host_id"
     t.index ["status"], name: "index_lobbies_on_status"

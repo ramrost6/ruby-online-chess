@@ -1,4 +1,5 @@
 class Game < ApplicationRecord
+  STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
   STATUSES = %w[waiting active completed abandoned].freeze
   TURNS = %w[white black].freeze
   RESULTS = %w[white_won black_won draw].freeze
@@ -11,6 +12,7 @@ class Game < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :turn, inclusion: { in: TURNS }
   validates :result, inclusion: { in: RESULTS }, allow_nil: true
+  validates :last_move, length: { maximum: 20 }, allow_nil: true
   validate :players_must_be_different
   validate :board_state_must_be_hash
   validate :result_matches_status
@@ -40,6 +42,22 @@ class Game < ApplicationRecord
     update!(turn: turn == "white" ? :black : :white)
   end
 
+  def record_move!(player, fen:, pgn:, san:)
+    raise ActiveRecord::RecordInvalid.new(self), "Game is not active." unless active?
+    raise ArgumentError, "Player is not part of this game." unless participant?(player)
+    raise ActiveRecord::RecordInvalid.new(self), "It is not this player's turn." unless color_for(player).to_s == turn
+    raise ArgumentError, "Board state must include a FEN." if fen.blank?
+
+    update!(
+      board_state: board_state.merge("fen" => fen, "pgn" => pgn.to_s),
+      pgn: pgn.to_s,
+      last_move: san,
+      turn: turn == "white" ? "black" : "white",
+      version: version + 1
+    )
+    broadcast_state!
+  end
+
   def participant?(player)
     player == white_player || player == black_player
   end
@@ -49,6 +67,23 @@ class Game < ApplicationRecord
     return :black if player == black_player
 
     nil
+  end
+
+  def broadcast_state!
+    GameChannel.broadcast_to(self, state_payload)
+  end
+
+  def state_payload
+    {
+      type: "state",
+      status: status,
+      result: result,
+      turn: turn,
+      fen: board_state.fetch("fen", STARTING_FEN),
+      pgn: pgn.to_s,
+      last_move: last_move,
+      version: version
+    }
   end
 
   STATUSES.each do |state|
