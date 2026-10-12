@@ -1,0 +1,98 @@
+<section
+  class="min-h-[calc(100vh-5rem)] bg-stone-900 px-4 py-8 text-white sm:px-6 lg:px-8"
+  data-game-id="<%= @game.id %>"
+  data-player-color="<%= @player_color %>"
+  data-move-url="<%= game_move_path(@game) %>"
+  data-resign-url="<%= game_resign_path(@game) %>"
+>
+  <div class="mx-auto w-full max-w-xl">
+    <div class="mb-5 flex items-center justify-between rounded-lg border border-stone-700 bg-stone-800 px-4 py-3 shadow-sm">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-wider text-stone-400">Game</p>
+        <p id="game-status" class="text-sm font-semibold text-white">Your color: <%= @player_color %></p>
+      </div>
+      <p id="game-turn" class="font-mono text-sm text-stone-300">White to move</p>
+    </div>
+
+    <div id="board" class="mx-auto w-full max-w-[400px]"></div>
+
+    <div class="mt-5 flex items-center justify-between rounded-lg border border-stone-700 bg-stone-800 px-4 py-4 shadow-sm">
+      <p id="last-move" class="text-sm text-stone-300">Make a legal move on the board.</p>
+      <button id="resign-button" type="button" class="rounded-md border border-red-400/50 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-950">Resign</button>
+    </div>
+  </div>
+</section>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="/chessboardjs/css/chessboard-1.0.0.min.css">
+<script src="/chessboardjs/js/chessboard-1.0.0.min.js"></script>
+<script type="module">
+  import { Chess } from "/chess.js-1.4.0/dist/esm/chess.js";
+
+  const gameView = document.querySelector("[data-game-id]");
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+  const playerColor = gameView.dataset.playerColor;
+  let chess = new Chess();
+  let board;
+  let version = -1;
+
+  function refreshLabels(state) {
+    document.querySelector("#game-status").textContent =
+      state.status === "completed" ? `Game over: ${state.result.replace("_", " ")}` : `Your color: ${playerColor}`;
+    document.querySelector("#game-turn").textContent = `${state.turn === "white" ? "White" : "Black"} to move`;
+    if (state.last_move) document.querySelector("#last-move").textContent = `Last move: ${state.last_move}`;
+  }
+
+  function applyState(state) {
+    if (state.version !== version) {
+      version = state.version;
+      chess.load(state.fen);
+      board.position(state.fen);
+      refreshLabels(state);
+    }
+    board.orientation(playerColor);
+  }
+
+  function sendMove(source, target) {
+    if (chess.turn() !== (playerColor === "white" ? "w" : "b")) return "snapback";
+    const move = chess.move({ from: source, to: target, promotion: "q" });
+    if (!move) return "snapback";
+    fetch(gameView.dataset.moveUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken, Accept: "application/json" },
+      body: JSON.stringify({ fen: chess.fen(), pgn: chess.pgn(), san: move.san })
+    }).then(async (response) => {
+      if (!response.ok) throw new Error("Move was rejected");
+      version = (await response.json()).version;
+      refreshLabels({ status: "active", turn: chess.turn() === "w" ? "white" : "black", last_move: move.san });
+    }).catch(() => {
+      chess.undo();
+      board.position(chess.fen());
+    });
+  }
+
+  async function resign() {
+    if (!confirm("Resign this game?")) return;
+    await fetch(gameView.dataset.resignUrl, {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrfToken, Accept: "application/json" }
+    });
+  }
+
+  board = Chessboard("board", {
+    position: "start",
+    orientation: playerColor,
+    draggable: true,
+    pieceTheme: "/chessboardjs/img/chesspieces/wikipedia/{piece}.png",
+    onDrop: sendMove
+  });
+  document.querySelector("#resign-button").addEventListener("click", resign);
+
+  import("https://cdn.jsdelivr.net/npm/@rails/actioncable@7.2.0/+esm").then(({ createConsumer }) => {
+    const consumer = createConsumer("/cable");
+    consumer.subscriptions.create(
+      { channel: "GameChannel", game_id: gameView.dataset.gameId },
+      { received: applyState }
+    );
+  });
+</script>
