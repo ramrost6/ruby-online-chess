@@ -37,18 +37,27 @@
   let version = -1;
 
   function refreshLabels(state) {
-    document.querySelector("#game-status").textContent =
-      state.status === "completed" ? `Game over: ${state.result.replace("_", " ")}` : `Your color: ${playerColor}`;
-    document.querySelector("#game-turn").textContent = `${state.turn === "white" ? "White" : "Black"} to move`;
+    const status = document.querySelector("#game-status");
+    const turn = document.querySelector("#game-turn");
+    const resignButton = document.querySelector("#resign-button");
+    const isCompleted = state.status === "completed";
+    const winner = state.result === "white_won" ? "White" : state.result === "black_won" ? "Black" : "Draw";
+
+    status.textContent = isCompleted ? `Game over: ${winner} won` : `Your color: ${playerColor}`;
+    turn.textContent = isCompleted ? "Game finished" : `${state.turn === "white" ? "White" : "Black"} to move`;
     if (state.last_move) document.querySelector("#last-move").textContent = `Last move: ${state.last_move}`;
+    resignButton.disabled = isCompleted;
+    resignButton.classList.toggle("cursor-not-allowed", isCompleted);
+    resignButton.classList.toggle("opacity-50", isCompleted);
   }
 
   function applyState(state) {
-    if (state.version !== version) {
+    if (state.version !== version || state.status === "completed") {
       version = state.version;
       chess.load(state.fen);
       board.position(state.fen);
       refreshLabels(state);
+      board.draggable(state.status !== "completed");
     }
     board.orientation(playerColor);
   }

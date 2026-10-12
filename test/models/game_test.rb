@@ -64,5 +64,6 @@ class GameTest < ActiveSupport::TestCase
     assert @game.completed?
     assert_equal "black_won", @game.result
     assert_not_nil @game.finished_at
+    assert_equal 1, @game.version
   end
 end

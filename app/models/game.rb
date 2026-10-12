@@ -27,7 +27,12 @@ class Game < ApplicationRecord
     raise ArgumentError, "Unknown game result." unless RESULTS.include?(game_result.to_s)
     raise ActiveRecord::RecordInvalid.new(self), "Game is not active." unless active?
 
-    update!(status: :completed, result: game_result, finished_at: Time.current)
+    update!(
+      status: :completed,
+      result: game_result,
+      finished_at: Time.current,
+      version: version + 1
+    )
   end
 
   def resign!(player)
