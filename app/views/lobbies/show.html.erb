@@ -16,7 +16,7 @@
 </section>
 
 <script type="module">
-  import { createConsumer } from "https://cdn.jsdelivr.net/npm/@rails/actioncable@7.2.0/+esm";
+  import { createConsumer } from "/vendor/actioncable.esm.js";
 
   const lobbyView = document.querySelector("[data-lobby-id]");
   const consumer = createConsumer("/cable");
