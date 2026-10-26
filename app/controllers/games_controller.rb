@@ -28,9 +28,9 @@ class GamesController < ApplicationController
 
     game.record_move!(
       current_user,
-      fen: params.require(:fen),
-      pgn: params[:pgn],
-      san: params.require(:san)
+      from: params.require(:from),
+      to: params.require(:to),
+      promotion: params[:promotion]
     )
     render json: { ok: true, version: game.version }
   rescue ActionController::ParameterMissing, ArgumentError, ActiveRecord::RecordInvalid => error

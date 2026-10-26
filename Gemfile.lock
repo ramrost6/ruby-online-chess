@@ -97,6 +97,7 @@ GEM
       regexp_parser (>= 1.5, < 3.0)
       xpath (~> 3.2)
     cgi (0.5.2)
+    chess (0.5.0)
     concurrent-ruby (1.3.8)
     connection_pool (2.5.5)
     crass (1.0.7)
@@ -308,6 +309,7 @@ DEPENDENCIES
   bootsnap
   brakeman
   capybara
+  chess (~> 0.5.0)
   debug
   importmap-rails
   jbuilder
@@ -347,6 +349,7 @@ CHECKSUMS
   builder (3.3.0) sha256=497918d2f9dca528fdca4b88d84e4ef4387256d984b8154e9d5d3fe5a9c8835f
   capybara (3.40.0) sha256=42dba720578ea1ca65fd7a41d163dd368502c191804558f6e0f71b391054aeef
   cgi (0.5.2) sha256=61ca30298171190fd4fa0d8018e57ada456eae9b7a2b78526debf7f0a0e6f8bb
+  chess (0.5.0) sha256=3f0fde2df416b223bb2c9a3c000d28de2087f005637e4fc5edb2dc3327ef809a
   concurrent-ruby (1.3.8) sha256=b2f1be836e968ccc78ccfce277ea79c72a88633f22306782c16ff23fb415d1e1
   connection_pool (2.5.5) sha256=e54ff92855753df1fd7c59fa04a398833355f27dd14c074f8c83a05f72a716ad
   crass (1.0.7) sha256=94868719948664c89ddcaf0a37c65048413dfcb1c869470a5f7a7ceb5390b295

@@ -27,14 +27,12 @@
 <link rel="stylesheet" href="/chessboardjs/css/chessboard-1.0.0.min.css">
 <script src="/chessboardjs/js/chessboard-1.0.0.min.js"></script>
 <script type="module">
-  import { Chess } from "/vendor/chess.js";
-
   const gameView = document.querySelector("[data-game-id]");
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
   const playerColor = gameView.dataset.playerColor;
-  let chess = new Chess();
   let board;
   let version = -1;
+  let currentFen = "start";
 
   function refreshLabels(state) {
     const status = document.querySelector("#game-status");
@@ -54,7 +52,7 @@
   function applyState(state) {
     if (state.version !== version || state.status === "completed") {
       version = state.version;
-      chess.load(state.fen);
+      currentFen = state.fen;
       board.position(state.fen);
       refreshLabels(state);
       board.draggable(state.status !== "completed");
@@ -62,22 +60,21 @@
     board.orientation(playerColor);
   }
 
-  function sendMove(source, target) {
-    if (chess.turn() !== (playerColor === "white" ? "w" : "b")) return "snapback";
-    const move = chess.move({ from: source, to: target, promotion: "q" });
-    if (!move) return "snapback";
+  function sendMove(source, target, piece) {
+    const isPawnPromotion = piece && piece.endsWith("P") && ["1", "8"].includes(target[1]);
+    const promotion = isPawnPromotion ? "q" : null;
+
     fetch(gameView.dataset.moveUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken, Accept: "application/json" },
-      body: JSON.stringify({ fen: chess.fen(), pgn: chess.pgn(), san: move.san })
+      body: JSON.stringify({ from: source, to: target, promotion: promotion })
     }).then(async (response) => {
       if (!response.ok) throw new Error("Move was rejected");
-      version = (await response.json()).version;
-      refreshLabels({ status: "active", turn: chess.turn() === "w" ? "white" : "black", last_move: move.san });
+      await response.json();
     }).catch(() => {
-      chess.undo();
-      board.position(chess.fen());
+      board.position(currentFen);
     });
+    return "snapback";
   }
 
   async function resign() {
