@@ -2,6 +2,7 @@
   class="min-h-[calc(100vh-5rem)] bg-stone-900 px-4 py-8 text-white sm:px-6 lg:px-8"
   data-game-id="<%= @game.id %>"
   data-player-color="<%= @player_color %>"
+  data-state-url="<%= game_state_path(@game) %>"
   data-move-url="<%= game_move_path(@game) %>"
   data-resign-url="<%= game_resign_path(@game) %>"
 >
@@ -49,7 +50,7 @@
     const playerColor = gameView.dataset.playerColor;
     let board;
     let version = -1;
-    let currentFen = "start";
+    let currentFen = window.__gameFen || "start";
 
     function refreshLabels(state) {
     const status = document.querySelector("#game-status");
@@ -89,7 +90,7 @@
       if (!response.ok) throw new Error("Move was rejected");
       await response.json();
     }).catch(() => {
-      board.position(currentFen);
+      board.position(window.__gameFen || currentFen);
     });
     return "snapback";
   }
@@ -112,8 +113,16 @@
       });
       boardElement.dataset.initialized = "true";
       window.__gameBoard = board;
+      if (window.__gameFen) board.position(window.__gameFen);
       document.querySelector("#resign-button").addEventListener("click", resign);
       window.dispatchEvent(new CustomEvent("chessboard:ready"));
+      fetch(gameView.dataset.stateUrl, { headers: { Accept: "application/json" } })
+        .then((response) => {
+          if (!response.ok) throw new Error("Unable to load the current game state");
+          return response.json();
+        })
+        .then((state) => window.dispatchEvent(new CustomEvent("game:state", { detail: state })))
+        .catch((error) => console.error("Initial game state failed:", error));
     } catch (error) {
       showBoardError(boardElement, error);
     }
