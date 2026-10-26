@@ -47,20 +47,34 @@ class Game < ApplicationRecord
     update!(turn: turn == "white" ? :black : :white)
   end
 
-  def record_move!(player, fen:, pgn:, san:)
+  def record_move!(player, from:, to:, promotion: nil)
     raise ActiveRecord::RecordInvalid.new(self), "Game is not active." unless active?
     raise ArgumentError, "Player is not part of this game." unless participant?(player)
     raise ActiveRecord::RecordInvalid.new(self), "It is not this player's turn." unless color_for(player).to_s == turn
-    raise ArgumentError, "Board state must include a FEN." if fen.blank?
 
+    chess_game = Chess::Game.new(board_state.fetch("moves", []))
+    notation = "#{from}#{to}#{promotion}"
+    san = chess_game.move(notation)
+    moves = board_state.fetch("moves", []) + [notation]
+    next_state = board_state.merge(
+      "fen" => chess_game.board.to_fen,
+      "moves" => moves,
+      "pgn" => chess_game.pgn.to_s
+    )
+
+    completion = completion_attributes(chess_game)
     update!(
-      board_state: board_state.merge("fen" => fen, "pgn" => pgn.to_s),
-      pgn: pgn.to_s,
+      board_state: next_state,
+      pgn: chess_game.pgn.to_s,
       last_move: san,
-      turn: turn == "white" ? "black" : "white",
-      version: version + 1
+      turn: chess_game.active_player.to_s,
+      version: version + 1,
+      **completion
     )
     broadcast_state!
+    san
+  rescue Chess::IllegalMoveError, Chess::BadNotationError => error
+    raise ArgumentError, "Illegal chess move: #{error.message}"
   end
 
   def participant?(player)
@@ -96,6 +110,18 @@ class Game < ApplicationRecord
   end
 
   private
+
+  def completion_attributes(chess_game)
+    return {} unless chess_game.over?
+
+    result = case chess_game.status
+             when :white_won, :white_won_resign then "white_won"
+             when :black_won, :black_won_resign then "black_won"
+             else "draw"
+             end
+
+    { status: :completed, result: result, finished_at: Time.current }
+  end
 
   def players_must_be_different
     errors.add(:black_player, "must be different from white player") if white_player.present? && white_player == black_player

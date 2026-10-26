@@ -28,7 +28,7 @@ class Lobby < ApplicationRecord
         user: host,
         white_player: host,
         black_player: guest,
-        board_state: { "fen" => Game::STARTING_FEN, "pgn" => "" }
+        board_state: { "fen" => Game::STARTING_FEN, "pgn" => "", "moves" => [] }
       ).tap(&:start!)
     end
   end

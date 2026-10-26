@@ -2,6 +2,7 @@
   class="min-h-[calc(100vh-5rem)] bg-stone-900 px-4 py-8 text-white sm:px-6 lg:px-8"
   data-game-id="<%= @game.id %>"
   data-player-color="<%= @player_color %>"
+  data-state-url="<%= game_state_path(@game) %>"
   data-move-url="<%= game_move_path(@game) %>"
   data-resign-url="<%= game_resign_path(@game) %>"
 >
@@ -14,7 +15,7 @@
       <p id="game-turn" class="font-mono text-sm text-stone-300">White to move</p>
     </div>
 
-    <div id="board" class="mx-auto w-full max-w-[400px]"></div>
+    <div id="board" class="mx-auto min-h-[400px] w-full max-w-[400px]"></div>
 
     <div class="mt-5 flex items-center justify-between rounded-lg border border-stone-700 bg-stone-800 px-4 py-4 shadow-sm">
       <p id="last-move" class="text-sm text-stone-300">Make a legal move on the board.</p>
@@ -23,20 +24,35 @@
   </div>
 </section>
 
-<script src="/vendor/jquery-3.7.1.min.js"></script>
 <link rel="stylesheet" href="/chessboardjs/css/chessboard-1.0.0.min.css">
+<script src="/vendor/jquery-3.7.1.min.js"></script>
 <script src="/chessboardjs/js/chessboard-1.0.0.min.js"></script>
-<script type="module">
-  import { Chess } from "/vendor/chess.js";
+<script>
+  function showBoardError(boardElement, error) {
+    console.error("Chessboard initialization failed:", error);
+    boardElement.textContent = "The chessboard could not be loaded. Check the local board assets and restart the server.";
+    boardElement.classList.add("grid", "place-items-center", "border", "border-red-400", "text-center", "text-sm", "text-red-300");
+  }
 
-  const gameView = document.querySelector("[data-game-id]");
-  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-  const playerColor = gameView.dataset.playerColor;
-  let chess = new Chess();
-  let board;
-  let version = -1;
+  function initializeGameBoard() {
+    const gameView = document.querySelector("[data-game-id]");
+    const boardElement = document.querySelector("#board");
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.content : "";
 
-  function refreshLabels(state) {
+    if (!gameView || !boardElement || !csrfToken) return false;
+    if (boardElement.dataset.initialized === "true") return true;
+    if (typeof window.jQuery !== "function" || typeof window.Chessboard !== "function") {
+      showBoardError(boardElement, new Error("jQuery or chessboard.js is unavailable."));
+      return true;
+    }
+
+    const playerColor = gameView.dataset.playerColor;
+    let board;
+    let version = -1;
+    let currentFen = window.__gameFen || "start";
+
+    function refreshLabels(state) {
     const status = document.querySelector("#game-status");
     const turn = document.querySelector("#game-turn");
     const resignButton = document.querySelector("#resign-button");
@@ -51,36 +67,35 @@
     resignButton.classList.toggle("opacity-50", isCompleted);
   }
 
-  function applyState(state) {
+    function applyState(state) {
     if (state.version !== version || state.status === "completed") {
       version = state.version;
-      chess.load(state.fen);
+      currentFen = state.fen;
       board.position(state.fen);
       refreshLabels(state);
-      board.draggable(state.status !== "completed");
+      boardElement.style.pointerEvents = state.status === "completed" ? "none" : "auto";
     }
     board.orientation(playerColor);
   }
 
-  function sendMove(source, target) {
-    if (chess.turn() !== (playerColor === "white" ? "w" : "b")) return "snapback";
-    const move = chess.move({ from: source, to: target, promotion: "q" });
-    if (!move) return "snapback";
+    function sendMove(source, target, piece) {
+    const isPawnPromotion = piece && piece.endsWith("P") && ["1", "8"].includes(target[1]);
+    const promotion = isPawnPromotion ? "q" : null;
+
     fetch(gameView.dataset.moveUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken, Accept: "application/json" },
-      body: JSON.stringify({ fen: chess.fen(), pgn: chess.pgn(), san: move.san })
+      body: JSON.stringify({ from: source, to: target, promotion: promotion })
     }).then(async (response) => {
       if (!response.ok) throw new Error("Move was rejected");
-      version = (await response.json()).version;
-      refreshLabels({ status: "active", turn: chess.turn() === "w" ? "white" : "black", last_move: move.san });
+      await response.json();
     }).catch(() => {
-      chess.undo();
-      board.position(chess.fen());
+      board.position(window.__gameFen || currentFen);
     });
+    return "snapback";
   }
 
-  async function resign() {
+    async function resign() {
     if (!confirm("Resign this game?")) return;
     await fetch(gameView.dataset.resignUrl, {
       method: "POST",
@@ -88,20 +103,101 @@
     });
   }
 
-  board = Chessboard("board", {
-    position: "start",
-    orientation: playerColor,
-    draggable: true,
-    pieceTheme: "/chessboardjs/img/chesspieces/wikipedia/{piece}.png",
-    onDrop: sendMove
-  });
-  document.querySelector("#resign-button").addEventListener("click", resign);
+    try {
+      board = window.Chessboard("board", {
+        position: "start",
+        orientation: playerColor,
+        draggable: true,
+        pieceTheme: "/chessboardjs/img/chesspieces/wikipedia/{piece}.png",
+        onDrop: sendMove
+      });
+      boardElement.dataset.initialized = "true";
+      window.__gameBoard = board;
+      if (window.__gameFen) board.position(window.__gameFen);
+      document.querySelector("#resign-button").addEventListener("click", resign);
+      window.dispatchEvent(new CustomEvent("chessboard:ready"));
+      fetch(gameView.dataset.stateUrl, { headers: { Accept: "application/json" } })
+        .then((response) => {
+          if (!response.ok) throw new Error("Unable to load the current game state");
+          return response.json();
+        })
+        .then((state) => window.dispatchEvent(new CustomEvent("game:state", { detail: state })))
+        .catch((error) => console.error("Initial game state failed:", error));
+    } catch (error) {
+      showBoardError(boardElement, error);
+    }
+    return true;
+  }
 
-  import("/vendor/actioncable.esm.js").then(({ createConsumer }) => {
-    const consumer = createConsumer("/cable");
-    consumer.subscriptions.create(
-      { channel: "GameChannel", game_id: gameView.dataset.gameId },
-      { received: applyState }
-    );
+  function startGameBoard(attempt = 0) {
+    if (initializeGameBoard() || attempt >= 20) return;
+    window.setTimeout(() => startGameBoard(attempt + 1), 50);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => startGameBoard(), { once: true });
+  } else {
+    startGameBoard();
+  }
+  document.addEventListener("turbo:load", () => startGameBoard());
+</script>
+
+<script type="module">
+  function connectGameChannel() {
+    const gameView = document.querySelector("[data-game-id]");
+    if (!gameView) return;
+
+    import("/vendor/actioncable.esm.js").then(({ createConsumer }) => {
+      const consumer = createConsumer("/cable");
+      consumer.subscriptions.create(
+        { channel: "GameChannel", game_id: gameView.dataset.gameId },
+        {
+          received(state) {
+            window.dispatchEvent(new CustomEvent("game:state", { detail: state }));
+          }
+        }
+      );
+    }).catch((error) => console.error("Action Cable connection failed:", error));
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", connectGameChannel, { once: true });
+  } else {
+    connectGameChannel();
+  }
+</script>
+
+<script>
+  window.addEventListener("game:state", function(event) {
+    const state = event.detail;
+    window.__pendingGameState = state;
+    const boardElement = document.querySelector("#board");
+    const gameView = document.querySelector("[data-game-id]");
+    if (!boardElement || !gameView || typeof window.Chessboard !== "function") return;
+    if (!window.__gameBoard) return;
+
+    if (window.__gameVersion !== state.version || state.status === "completed") {
+      window.__gameVersion = state.version;
+      window.__gameFen = state.fen;
+      window.__gameBoard.position(state.fen);
+      const status = document.querySelector("#game-status");
+      const turn = document.querySelector("#game-turn");
+      const resignButton = document.querySelector("#resign-button");
+      const playerColor = gameView.dataset.playerColor;
+      const isCompleted = state.status === "completed";
+      const winner = state.result === "white_won" ? "White" : state.result === "black_won" ? "Black" : "Draw";
+
+      status.textContent = isCompleted ? `Game over: ${winner} won` : `Your color: ${playerColor}`;
+      turn.textContent = isCompleted ? "Game finished" : `${state.turn === "white" ? "White" : "Black"} to move`;
+      if (state.last_move) document.querySelector("#last-move").textContent = `Last move: ${state.last_move}`;
+      resignButton.disabled = isCompleted;
+      boardElement.style.pointerEvents = isCompleted ? "none" : "auto";
+    }
+  });
+
+  window.addEventListener("chessboard:ready", function() {
+    if (window.__pendingGameState) {
+      window.dispatchEvent(new CustomEvent("game:state", { detail: window.__pendingGameState }));
+    }
   });
 </script>

@@ -71,7 +71,13 @@ Rails.application.configure do
   config.action_view.annotate_rendered_view_with_filenames = true
 
   # Uncomment if you wish to allow Action Cable access from any origin.
-  # config.action_cable.disable_request_forgery_protection = true
+  config.action_cable.allowed_request_origins = [
+    %r{\Ahttp://localhost:\d+\z},
+    %r{\Ahttp://127\.0\.0\.1:\d+\z},
+    %r{\Ahttp://192\.168\.\d{1,3}\.\d{1,3}:\d+\z},
+    %r{\Ahttp://10\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+\z},
+    %r{\Ahttp://172\.(?:1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}:\d+\z}
+  ]
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
