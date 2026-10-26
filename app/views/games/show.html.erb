@@ -39,14 +39,11 @@
     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
     const csrfToken = csrfMeta ? csrfMeta.content : "";
 
-    if (!gameView || !boardElement || !csrfToken) {
-      console.error("Chessboard initialization skipped: game container or CSRF token is missing.");
-      return;
-    }
-    if (boardElement.dataset.initialized === "true") return;
+    if (!gameView || !boardElement || !csrfToken) return false;
+    if (boardElement.dataset.initialized === "true") return true;
     if (typeof window.jQuery !== "function" || typeof window.Chessboard !== "function") {
       showBoardError(boardElement, new Error("jQuery or chessboard.js is unavailable."));
-      return;
+      return true;
     }
 
     const playerColor = gameView.dataset.playerColor;
@@ -120,18 +117,20 @@
     } catch (error) {
       showBoardError(boardElement, error);
     }
+    return true;
   }
 
-  function startGameBoard() {
-    initializeGameBoard();
+  function startGameBoard(attempt = 0) {
+    if (initializeGameBoard() || attempt >= 20) return;
+    window.setTimeout(() => startGameBoard(attempt + 1), 50);
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", startGameBoard, { once: true });
+    document.addEventListener("DOMContentLoaded", () => startGameBoard(), { once: true });
   } else {
     startGameBoard();
   }
-  document.addEventListener("turbo:load", startGameBoard);
+  document.addEventListener("turbo:load", () => startGameBoard());
 </script>
 
 <script type="module">

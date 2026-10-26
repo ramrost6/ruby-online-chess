@@ -1,4 +1,11 @@
 Rails.application.routes.draw do
+  get "/favicon.ico", to: ->(_env) {
+    [204, { "Content-Type" => "image/x-icon", "Cache-Control" => "public, max-age=86400" }, []]
+  }
+  get "/.well-known/appspecific/com.chrome.devtools.json", to: ->(_env) {
+    [204, { "Content-Type" => "application/json", "Cache-Control" => "no-store" }, []]
+  }
+
   mount ActionCable.server => "/cable"
   root "pages#home"
 
